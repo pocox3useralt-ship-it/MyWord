@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Word Guess Game</title>
+<style>
+:root {
+    --bg-main: #0e0e0e;
+    --bg-board: #121212;
+    --bg-tile: #1b1b1b;
+    --color-text: #eaeaea;
+    --color-muted: #888;
+    --green: #3aa394;
+    --yellow: #d3ad69;
+    --black: #2a2a2a;
+    --border-default: #333;
+    --border-active: #555;
+    --tile-size: 60px;
+    --tile-gap: 8px;
+    --font-main: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background: radial-gradient(circle at top,#1b1b1b,#050505);font-family:var(--font-main);color:var(--color-text);min-height:100vh;display:flex;align-items:center;justify-content:center;overflow-x:hidden;}
+#app{width:100%;max-width:400px;padding:20px;background:#111;border-radius:10px;}
+header{text-align:center;margin-bottom:20px;}
+header h1{letter-spacing:4px;font-weight:700;}
+header p{font-size:0.9rem;color:var(--color-muted);}
+#board{display:grid;grid-template-rows:repeat(6,1fr);gap:var(--tile-gap);margin-bottom:20px;}
+.row{display:grid;grid-template-columns:repeat(5,var(--tile-size));gap:var(--tile-gap);justify-content:center;}
+.tile{width:var(--tile-size);height:var(--tile-size);border-radius:8px;background:var(--bg-tile);border:2px solid var(--border-default);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:bold;text-transform:uppercase;transition:background 0.3s,border 0.3s,transform 0.2s;}
+.tile.active{border-color:var(--border-active);transform:scale(1.05);}
+.tile.correct{background:var(--green);border-color:var(--green);color:#fff;}
+.tile.present{background:var(--yellow);border-color:var(--yellow);color:#fff;}
+.tile.absent{background:var(--black);border-color:var(--black);color:#777;}
+@keyframes pop{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
+.tile.pop{animation:pop 0.15s ease-in-out;}
+@keyframes shake{0%{transform:translateX(0);}25%{transform:translateX(-5px);}50%{transform:translateX(5px);}75%{transform:translateX(-5px);}100%{transform:translateX(0);}}
+.row.shake{animation:shake 0.3s;}
+#message{text-align:center;min-height:24px;margin-bottom:10px;font-weight:bold;}
+#keyboard{display:grid;gap:8px;}
+.key-row{display:flex;justify-content:center;gap:6px;}
+.key{min-width:34px;padding:10px 6px;border-radius:6px;background:#2b2b2b;border:none;color:white;font-weight:bold;cursor:pointer;transition:background 0.2s,transform 0.1s;}
+.key:hover{transform:scale(1.05);}
+.key.correct{background:var(--green);}
+.key.present{background:var(--yellow);}
+.key.absent{background:var(--black);}
+footer{margin-top:15px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px;}
+button.control{background:#1f1f1f;color:white;border:1px solid #333;padding:8px 12px;border-radius:6px;cursor:pointer;}
+button.control:hover{background:#333;}
+@media(max-width:400px){:root{--tile-size:50px;}}
+</style>
+</head>
+<body>
+
+<div id="app">
+<header>
+<h1>WORD GUESS</h1>
+<p>Guess the 5-letter word</p>
+</header>
+<div id="message"></div>
+<div id="board"></div>
+<div id="keyboard"></div>
+<footer>
+<button class="control" id="resetBtn">Reset</button>
+<button class="control" id="hintBtn">Hint (3)</button>
+<button class="control" id="reportBtn">Report Bug</button>
+<span id="attempts">Attempt 1 / 6</span>
+</footer>
+</div>
+
+<script>
+const WORDS=`About Alert Argue Beach Above Alike Arise Began Abuse Alive Array Begin
+Actor Allow Aside Begun Acute Alone Asset Being Admit Along Audio Below
+Adopt Alter Audit Bench Adult Among Avoid Billy After Anger Award Birth
+Again Angle Aware Black Agent Angry Badly Blame Agree Apart Baker Blind
+Ahead Apple Bases Block Alarm Apply Basic Blood Album Arena Basis Board
+Boost Buyer China Cover Booth Cable Chose Craft Bound Calif Civil Crash
+Brain Carry Claim Cream Brand Catch Class Crime Bread Cause Clean Cross
+Break Chain Clear Crowd Breed Chair Click Crown Brief Chart Clock Curve
+Bring Chase Close Cycle Broad Cheap Coach Daily Broke Check Coast Dance
+Brown Chest Could Dated Build Chief Count Dealt Built Child Court Death
+Debut Entry Forth Group Delay Equal Forty Grown Depth Error Forum Guard
+Doing Event Found Guess Doubt Every Frame Guest Dozen Exact Frank Guide
+Draft Exist Fraud Happy Drama Extra Fresh Harry Drawn Faith Front Heart
+Dream False Fruit Heavy Dress Fault Fully Hence Drill Fibre Funny Night
+Drink Field Giant Horse Drive Fifth Given Hotel Drove Fifty Glass House
+Dying Fight Globe Human Eager Final Going Ideal Early First Grace Image
+Earth Fixed Grade Index Eight Flash Grand Inner Elite Fleet Grant Input
+Empty Floor Grass Issue Enemy Fluid Great Irony Enjoy Focus Green Juice
+Enter Force Gross Joint Judge Metal Media Newly Known Local Might Noise
+Label Logic Minor North Large Loose Minus Noted Laser Lower Mixed Novel
+Later Lucky Model Nurse Laugh Lunch Money Occur Layer Lying Month Ocean
+Learn Magic Moral Offer Lease Major Motor Often Least Maker Mount Order
+Leave March Mouse Other Legal Music Mouth Ought Level Match Movie Paint
+Light Mayor Needs Paper Limit Meant Never Party Peace Power Radio Round
+Panel Press Raise Route Phase Price Range Royal Phone Pride Rapid Rural
+Photo Prime Ratio Scale Piece Print Reach Scene Pilot Prior Ready Scope
+Pitch Prize Refer Score Place Proof Right Sense Plain Proud Rival Serve
+Plane Prove River Seven Plant Queen Quick Shall Plate Sixth Stand Shape
+Point Quiet Roman Share Pound Quite Rough Sharp Sheet Spare Style Times
+Shelf Speak Sugar Tired Shell Speed Suite Title Shift Spend Super Today
+Shirt Spent Sweet Topic Shock Split Table Total Shoot Spoke Taken Touch
+Short Sport Taste Tough Shown Staff Taxes Tower Sight Stage Teach Track
+Since Stake Teeth Trade Sixty Start Texas Treat Sized State Thank Trend
+Skill Steam Theft Trial Sleep Steel Their Tried Slide Stick Theme Tries
+Small Still There Truck Smart Stock These Truly Smile Stone Thick Trust
+Smith Stood Thing Truth Smoke Store Think Twice Solid Storm Third Under
+Solve Story Those Undue Sorry Strip Three Union Sound Stuck Threw Unity
+South Study Throw Until Space Stuff Tight Upper Upset Whole Waste Wound
+Urban Whose Watch Write Usage Woman Water Wrong Usual Train Wheel Wrote
+Valid World Where Yield Value Worry Which Young Video Worse While Youth
+Virus Worst White Worth Visit Would Vital Voice`.split(/\s+/).map(w=>w.toUpperCase());
+
+const WORD_LENGTH=5, MAX_ATTEMPTS=6;
+let secretWord="",currentRow=0,currentCol=0,gameOver=false,board=[],hintsLeft=3;
+
+const boardEl=document.getElementById("board"),
+      keyboardEl=document.getElementById("keyboard"),
+      messageEl=document.getElementById("message"),
+      attemptsEl=document.getElementById("attempts"),
+      resetBtn=document.getElementById("resetBtn"),
+      hintBtn=document.getElementById("hintBtn"),
+      reportBtn=document.getElementById("reportBtn");
+
+initGame();
+
+function initGame(){
+    board=[]; boardEl.innerHTML=""; keyboardEl.innerHTML=""; messageEl.textContent="";
+    gameOver=false; currentRow=0; currentCol=0; hintsLeft=3;
+    secretWord = WORDS[Math.floor(Math.random()*WORDS.length)];
+    createBoard(); createKeyboard(); updateAttempts();
+    hintBtn.textContent=`Hint (${hintsLeft})`;
+}
+
+function createBoard(){
+    for(let r=0;r<MAX_ATTEMPTS;r++){
+        const row=document.createElement("div"); row.className="row"; const tiles=[];
+        for(let c=0;c<WORD_LENGTH;c++){ const tile=document.createElement("div"); tile.className="tile"; row.appendChild(tile); tiles.push(tile);}
+        board.push(tiles); boardEl.appendChild(row);
+    }
+}
+
+function createKeyboard(){
+    const layout=["QWERTYUIOP","ASDFGHJKL","ZXCVBNM"];
+    layout.forEach(rowLetters=>{
+        const row=document.createElement("div"); row.className="key-row";
+        rowLetters.split("").forEach(letter=>{ const key=document.createElement("button"); key.className="key"; key.textContent=letter; key.onclick=()=>handleInput(letter); row.appendChild(key); });
+        keyboardEl.appendChild(row);
+    });
+    const controlRow=document.createElement("div"); controlRow.className="key-row";
+    const enterKey=document.createElement("button"); enterKey.className="key"; enterKey.textContent="ENTER"; enterKey.onclick=submitGuess;
+    const backKey=document.createElement("button"); backKey.className="key"; backKey.textContent="⌫"; backKey.onclick=deleteLetter;
+    controlRow.appendChild(enterKey); controlRow.appendChild(backKey); keyboardEl.appendChild(controlRow);
+}
+
+function handleInput(letter){ if(gameOver||currentCol>=WORD_LENGTH) return; const tile=board[currentRow][currentCol]; tile.textContent=letter; tile.classList.add("active","pop"); currentCol++; }
+function deleteLetter(){ if(gameOver||currentCol===0) return; currentCol--; const tile=board[currentRow][currentCol]; tile.textContent=""; tile.classList.remove("active"); }
+function submitGuess(){ if(gameOver) return; if(currentCol<WORD_LENGTH){ shakeRow(); showMessage("Not enough letters"); return;} const guess=board[currentRow].map(t=>t.textContent).join(""); evaluateGuess(guess); }
+
+function evaluateGuess(guess){
+    const secretArr=secretWord.split(""); const guessArr=guess.split(""); const result=Array(WORD_LENGTH).fill("absent");
+    for(let i=0;i<WORD_LENGTH;i++){ if(guessArr[i]===secretArr[i]){ result[i]="correct"; secretArr[i]=null; } }
+    for(let i=0;i<WORD_LENGTH;i++){ if(result[i]!=="correct"){ const idx=secretArr.indexOf(guessArr[i]); if(idx!==-1){ result[i]="present"; secretArr[idx]=null; } } }
+    applyResult(result); if(guess===secretWord){ gameOver=true; showMessage("🎉 You Win!"); return; }
+    currentRow++; currentCol=0; updateAttempts(); if(currentRow>=MAX_ATTEMPTS){ gameOver=true; showMessage("❌ Word was: "+secretWord);}
+}
+
+function applyResult(result){ result.forEach((state,i)=>{ const tile=board[currentRow][i]; tile.classList.remove("active"); tile.classList.add(state); updateKeyboard(tile.textContent,state); }); }
+function updateKeyboard(letter,state){ document.querySelectorAll(".key").forEach(key=>{ if(key.textContent===letter){ key.classList.remove("correct","present","absent"); key.classList.add(state); } }); }
+function shakeRow(){ const row=boardEl.children[currentRow]; row.classList.add("shake"); setTimeout(()=>row.classList.remove("shake"),300);}
+function showMessage(text){ messageEl.textContent=text; }
+function updateAttempts(){ attemptsEl.textContent=`Attempt ${currentRow+1} / ${MAX_ATTEMPTS}`; }
+
+resetBtn.onclick=initGame;
+
+// HINT FUNCTION
+hintBtn.onclick=function(){
+    if(gameOver) return;
+    if(hintsLeft<=0){ showMessage("No hints left!"); return; }
+    const unrevealedIndices=[];
+    for(let i=0;i<WORD_LENGTH;i++){
+        const tile=board[currentRow][i];
+        if(tile.textContent.toUpperCase()!==secretWord[i]) unrevealedIndices.push(i);
+    }
+    if(unrevealedIndices.length===0){ showMessage("Row already has correct letters!"); return; }
+    const idx = unrevealedIndices[Math.floor(Math.random()*unrevealedIndices.length)];
+    board[currentRow][idx].textContent = secretWord[idx];
+    // color the hint immediately
+    if(board[currentRow][idx].textContent === secretWord[idx]) board[currentRow][idx].classList.add("correct");
+    hintsLeft--; hintBtn.textContent=`Hint (${hintsLeft})`; showMessage("Hint revealed a letter!");
+}
+
+// REPORT BUG BUTTON
+reportBtn.onclick=function(){
+    window.location.href = "mailto:workabla.isi@gmail.com?subject=Bug Report&body=Describe your bug here...";
+}
+
+document.addEventListener("keydown",e=>{
+    if(e.key==="Enter") submitGuess();
+    else if(e.key==="Backspace") deleteLetter();
+    else if(/^[a-zA-Z]$/.test(e.key)) handleInput(e.key.toUpperCase());
+});
+</script>
+</body>
+</html>
